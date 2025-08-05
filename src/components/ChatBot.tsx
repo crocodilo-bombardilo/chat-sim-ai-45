@@ -8,7 +8,7 @@ interface Message {
   content: string;
   isTyping?: boolean;
   showInput?: boolean;
-  inputType?: 'text' | 'buttons';
+  inputType?: 'text' | 'email' | 'date' | 'buttons';
   buttons?: string[];
 }
 
@@ -16,6 +16,16 @@ interface UserData {
   name: string;
   cpf: string;
   subject: string;
+  // Reembolso fields
+  refundReason?: string;
+  triedToResolve?: string;
+  purchaseEmail?: string;
+  purchaseDate?: string;
+  // Erro fields
+  deviceModel?: string;
+  appInstalled?: string;
+  appOpened?: string;
+  errorMessage?: string;
 }
 
 const ChatBot = () => {
@@ -35,7 +45,7 @@ const ChatBot = () => {
     return `msg-${messageIdCounter.current}`;
   };
 
-  const addMessage = (content: string, type: 'host' | 'user' = 'host', options?: { showInput?: boolean; inputType?: 'text' | 'buttons'; buttons?: string[] }) => {
+  const addMessage = (content: string, type: 'host' | 'user' = 'host', options?: { showInput?: boolean; inputType?: 'text' | 'email' | 'date' | 'buttons'; buttons?: string[] }) => {
     const newMessage: Message = {
       id: getNextMessageId(),
       type,
@@ -47,7 +57,7 @@ const ChatBot = () => {
     return newMessage;
   };
 
-  const showTypingAndAddMessage = (content: string, delay: number = 2000, options?: { showInput?: boolean; inputType?: 'text' | 'buttons'; buttons?: string[] }) => {
+  const showTypingAndAddMessage = (content: string, delay: number = 2000, options?: { showInput?: boolean; inputType?: 'text' | 'email' | 'date' | 'buttons'; buttons?: string[] }) => {
     setIsTyping(true);
     setTimeout(() => {
       addMessage(content, 'host', options);
@@ -111,6 +121,32 @@ const ChatBot = () => {
     }, 17500);
   };
 
+  // Reembolso flow
+  const startRefundFlow = () => {
+    showTypingAndAddMessage('Puxa vida 😔', 1500);
+    setTimeout(() => {
+      showTypingAndAddMessage(
+        'Pode me contar um pouco sobre o motivo do reembolso?', 
+        2000, 
+        { showInput: true, inputType: 'text' }
+      );
+      setCurrentStep('refund-reason');
+    }, 3500);
+  };
+
+  // Erro flow
+  const startErrorFlow = () => {
+    showTypingAndAddMessage('Entendi 😕 Vamos te ajudar com isso.', 1500);
+    setTimeout(() => {
+      showTypingAndAddMessage(
+        'Qual é o modelo do aparelho que você tentou espionar?', 
+        2000, 
+        { showInput: true, inputType: 'text' }
+      );
+      setCurrentStep('error-device');
+    }, 3500);
+  };
+
   const handleInputSubmit = () => {
     if (!inputValue.trim()) return;
 
@@ -120,45 +156,192 @@ const ChatBot = () => {
     setInputValue('');
     setWaitingForInput(false);
 
-    if (currentStep === 'askingName') {
-      setUserData(prev => ({ ...prev, name: userInput }));
-      setCurrentStep('askingCPF');
-      
-      setTimeout(() => {
-        showTypingAndAddMessage(
-          '➡️ Qual seu CPF?',
-          2000,
-          { showInput: true, inputType: 'text' }
-        );
-      }, 1000);
+    switch (currentStep) {
+      case 'askingName':
+        setUserData(prev => ({ ...prev, name: userInput }));
+        setCurrentStep('askingCPF');
+        setTimeout(() => {
+          showTypingAndAddMessage(
+            '➡️ Qual seu CPF?',
+            2000,
+            { showInput: true, inputType: 'text' }
+          );
+        }, 1000);
+        break;
 
-    } else if (currentStep === 'askingCPF') {
-      setUserData(prev => ({ ...prev, cpf: userInput }));
-      setCurrentStep('askingSubject');
-      
-      setTimeout(() => {
-        showTypingAndAddMessage(
-          '➡️ Qual assunto quer tratar?',
-          2000,
-          { showInput: true, inputType: 'buttons', buttons: ['Solicitar Reembolso', 'Erro ao Espionar'] }
-        );
-      }, 1000);
+      case 'askingCPF':
+        setUserData(prev => ({ ...prev, cpf: userInput }));
+        setCurrentStep('askingSubject');
+        setTimeout(() => {
+          showTypingAndAddMessage(
+            '➡️ Qual assunto quer tratar?',
+            2000,
+            { showInput: true, inputType: 'buttons', buttons: ['Solicitar Reembolso', 'Erro ao Espionar'] }
+          );
+        }, 1000);
+        break;
+
+      // Refund flow
+      case 'refund-reason':
+        setUserData(prev => ({ ...prev, refundReason: userInput }));
+        setCurrentStep('refund-tried-resolve');
+        setTimeout(() => {
+          showTypingAndAddMessage(
+            'Entendi. 😕 Você já tentou resolver o problema antes de solicitar o reembolso?',
+            1800,
+            { showInput: true, inputType: 'buttons', buttons: ['Sim', 'Não'] }
+          );
+        }, 1000);
+        break;
+
+      case 'refund-email':
+        setUserData(prev => ({ ...prev, purchaseEmail: userInput }));
+        setCurrentStep('refund-date');
+        setTimeout(() => {
+          showTypingAndAddMessage(
+            'E qual a data da compra?',
+            1500,
+            { showInput: true, inputType: 'date' }
+          );
+        }, 1000);
+        break;
+
+      case 'refund-date':
+        setUserData(prev => ({ ...prev, purchaseDate: userInput }));
+        setCurrentStep('refund-complete');
+        setTimeout(() => {
+          showTypingAndAddMessage('Agradeço pelas informações. 🙏', 2000);
+        }, 1000);
+        setTimeout(() => {
+          showTypingAndAddMessage(
+            'Nosso aplicativo e nosso suporte estão passando por instabilidades temporárias, pois estamos realizando uma grande atualização.',
+            2500
+          );
+        }, 3000);
+        setTimeout(() => {
+          showTypingAndAddMessage(
+            'Por isso, os reembolsos estão sendo processados com mais lentidão.',
+            2000
+          );
+        }, 5500);
+        setTimeout(() => {
+          showTypingAndAddMessage(
+            'Mas fique tranquilo(a), garantimos que o valor será devolvido no prazo de **5 a 10 dias úteis**.',
+            1800
+          );
+        }, 7500);
+        setTimeout(() => {
+          showTypingAndAddMessage(
+            'Se tiver qualquer outra dúvida, estamos aqui para ajudar 💬',
+            2000
+          );
+        }, 9300);
+        break;
+
+      // Error flow
+      case 'error-device':
+        setUserData(prev => ({ ...prev, deviceModel: userInput }));
+        setCurrentStep('error-installed');
+        setTimeout(() => {
+          showTypingAndAddMessage(
+            'Você conseguiu instalar o aplicativo corretamente?',
+            2000,
+            { showInput: true, inputType: 'buttons', buttons: ['Sim', 'Não'] }
+          );
+        }, 1000);
+        break;
+
+      case 'error-message':
+        setUserData(prev => ({ ...prev, errorMessage: userInput }));
+        setCurrentStep('error-complete');
+        setTimeout(() => {
+          showTypingAndAddMessage('Muito bem, obrigado por compartilhar. 🛠️', 2000);
+        }, 1000);
+        setTimeout(() => {
+          showTypingAndAddMessage(
+            'Estamos cientes de que alguns usuários estão enfrentando instabilidades.',
+            2000
+          );
+        }, 3000);
+        setTimeout(() => {
+          showTypingAndAddMessage(
+            'Nosso aplicativo está passando por uma **grande atualização**, e isso pode afetar o funcionamento temporariamente.',
+            2500
+          );
+        }, 5000);
+        setTimeout(() => {
+          showTypingAndAddMessage(
+            'Mas fique tranquilo(a), tudo será normalizado entre **5 a 10 dias**.',
+            2000
+          );
+        }, 7500);
+        setTimeout(() => {
+          showTypingAndAddMessage(
+            'Como forma de compensação, você receberá:\n\n- 🎁 Bônus de Espionagem\n- 🖼️ Acesso à galeria do celular espionado',
+            1800
+          );
+        }, 9500);
+        setTimeout(() => {
+          showTypingAndAddMessage(
+            'Finalizamos por aqui! Obrigado pela paciência e confiança 💙',
+            2000
+          );
+        }, 11300);
+        break;
     }
   };
 
   const handleButtonClick = (buttonText: string) => {
     // Add user selection
     addMessage(buttonText, 'user');
-    setUserData(prev => ({ ...prev, subject: buttonText }));
     setWaitingForInput(false);
-    setCurrentStep('completed');
 
-    setTimeout(() => {
-      showTypingAndAddMessage(
-        `Perfeito, ${userData.name}! Seu atendimento para "${buttonText}" foi registrado. Nossa equipe entrará em contato em breve. Obrigada por aguardar!`,
-        2000
-      );
-    }, 1000);
+    switch (currentStep) {
+      case 'askingSubject':
+        setUserData(prev => ({ ...prev, subject: buttonText }));
+        if (buttonText === 'Solicitar Reembolso') {
+          startRefundFlow();
+        } else if (buttonText === 'Erro ao Espionar') {
+          startErrorFlow();
+        }
+        break;
+
+      case 'refund-tried-resolve':
+        setUserData(prev => ({ ...prev, triedToResolve: buttonText }));
+        setCurrentStep('refund-email');
+        setTimeout(() => {
+          showTypingAndAddMessage(
+            'Certo! Para continuarmos, qual foi o e-mail usado na compra?',
+            2000,
+            { showInput: true, inputType: 'email' }
+          );
+        }, 1000);
+        break;
+
+      case 'error-installed':
+        setUserData(prev => ({ ...prev, appInstalled: buttonText }));
+        setCurrentStep('error-opened');
+        setTimeout(() => {
+          showTypingAndAddMessage(
+            'O app chegou a abrir normalmente depois da instalação?',
+            1800,
+            { showInput: true, inputType: 'buttons', buttons: ['Sim', 'Deu erro'] }
+          );
+        }, 1000);
+        break;
+
+      case 'error-opened':
+        setUserData(prev => ({ ...prev, appOpened: buttonText }));
+        setCurrentStep('error-message');
+        setTimeout(() => {
+          showTypingAndAddMessage(
+            'Se apareceu alguma mensagem de erro, qual foi?',
+            2000,
+            { showInput: true, inputType: 'text' }
+          );
+        }, 1000);
+        break;
+    }
   };
 
   return (
@@ -194,13 +377,18 @@ const ChatBot = () => {
                 <p className="text-sm leading-relaxed">{message.content}</p>
                 
                 {/* Show input when needed */}
-                {message.showInput && message.inputType === 'text' && waitingForInput && (
+                {message.showInput && (message.inputType === 'text' || message.inputType === 'email' || message.inputType === 'date') && waitingForInput && (
                   <div className="mt-3 space-y-2">
                     <Input
+                      type={message.inputType === 'email' ? 'email' : message.inputType === 'date' ? 'date' : 'text'}
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && handleInputSubmit()}
-                      placeholder="Digite sua resposta..."
+                      placeholder={
+                        message.inputType === 'email' ? 'Digite seu e-mail...' 
+                        : message.inputType === 'date' ? 'DD/MM/AAAA'
+                        : 'Digite sua resposta...'
+                      }
                       className="text-sm"
                     />
                     <Button
