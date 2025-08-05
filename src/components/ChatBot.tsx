@@ -8,7 +8,7 @@ interface Message {
   content: string;
   isTyping?: boolean;
   showInput?: boolean;
-  inputType?: 'text' | 'email' | 'date' | 'buttons';
+  inputType?: 'text' | 'email' | 'date' | 'buttons' | 'feedback';
   buttons?: string[];
 }
 
@@ -26,6 +26,8 @@ interface UserData {
   appInstalled?: string;
   appOpened?: string;
   errorMessage?: string;
+  // Feedback field
+  feedback?: string;
 }
 
 const ChatBot = () => {
@@ -36,16 +38,17 @@ const ChatBot = () => {
   const [inputValue, setInputValue] = useState('');
   const [currentStep, setCurrentStep] = useState('start');
   
-  // Use ref to prevent multiple initializations
+  // Use ref to prevent multiple initializations and for auto-scroll
   const initialized = useRef(false);
   const messageIdCounter = useRef(0);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const getNextMessageId = () => {
     messageIdCounter.current += 1;
     return `msg-${messageIdCounter.current}`;
   };
 
-  const addMessage = (content: string, type: 'host' | 'user' = 'host', options?: { showInput?: boolean; inputType?: 'text' | 'email' | 'date' | 'buttons'; buttons?: string[] }) => {
+  const addMessage = (content: string, type: 'host' | 'user' = 'host', options?: { showInput?: boolean; inputType?: 'text' | 'email' | 'date' | 'buttons' | 'feedback'; buttons?: string[] }) => {
     const newMessage: Message = {
       id: getNextMessageId(),
       type,
@@ -57,7 +60,7 @@ const ChatBot = () => {
     return newMessage;
   };
 
-  const showTypingAndAddMessage = (content: string, delay: number = 2000, options?: { showInput?: boolean; inputType?: 'text' | 'email' | 'date' | 'buttons'; buttons?: string[] }) => {
+  const showTypingAndAddMessage = (content: string, delay: number = 2000, options?: { showInput?: boolean; inputType?: 'text' | 'email' | 'date' | 'buttons' | 'feedback'; buttons?: string[] }) => {
     setIsTyping(true);
     setTimeout(() => {
       addMessage(content, 'host', options);
@@ -68,6 +71,11 @@ const ChatBot = () => {
       }
     }, delay);
   };
+
+  // Auto-scroll to bottom when new messages are added
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   // Initialize conversation
   useEffect(() => {
@@ -97,7 +105,7 @@ const ChatBot = () => {
     // Message 3
     setTimeout(() => {
       showTypingAndAddMessage(
-        '📰 Notícia: Estamos com nosso aplicativo Espião em manutenção, por isso nosso suporte está com alta demanda. Pode levar mais tempo para respostas e reembolsos.',
+        '📰 Notícia: Estamos com nosso aplicativo web Espião em manutenção, por isso nosso suporte está com alta demanda. Pode levar mais tempo para respostas e reembolsos.',
         2000
       );
     }, 9500);
@@ -214,7 +222,7 @@ const ChatBot = () => {
         }, 1000);
         setTimeout(() => {
           showTypingAndAddMessage(
-            'Nosso aplicativo e nosso suporte estão passando por instabilidades temporárias, pois estamos realizando uma grande atualização.',
+            'Nosso aplicativo web e nosso suporte estão passando por instabilidades temporárias, pois estamos realizando uma grande atualização.',
             2500
           );
         }, 3000);
@@ -226,15 +234,17 @@ const ChatBot = () => {
         }, 5500);
         setTimeout(() => {
           showTypingAndAddMessage(
-            'Mas fique tranquilo(a), garantimos que o valor será devolvido no prazo de **5 a 10 dias úteis**.',
+            'Nosso Engenheiro de Software (e hacker nas horas vagas 😄), que está à frente da atualização, garantiu pessoalmente que em até 5 a 10 dias tudo estará resolvido — e você receberá um e-mail assim que o processo for concluído.',
             1800
           );
         }, 7500);
         setTimeout(() => {
           showTypingAndAddMessage(
             'Se tiver qualquer outra dúvida, estamos aqui para ajudar 💬',
-            2000
+            2000,
+            { showInput: true, inputType: 'buttons', buttons: ['Enviar dúvida / reclamação / sugestão'] }
           );
+          setCurrentStep('refund-feedback-option');
         }, 9300);
         break;
 
@@ -244,7 +254,7 @@ const ChatBot = () => {
         setCurrentStep('error-installed');
         setTimeout(() => {
           showTypingAndAddMessage(
-            'Você conseguiu instalar o aplicativo corretamente?',
+            'Você conseguiu instalar o aplicativo web corretamente?',
             2000,
             { showInput: true, inputType: 'buttons', buttons: ['Sim', 'Não'] }
           );
@@ -265,13 +275,13 @@ const ChatBot = () => {
         }, 3000);
         setTimeout(() => {
           showTypingAndAddMessage(
-            'Nosso aplicativo está passando por uma **grande atualização**, e isso pode afetar o funcionamento temporariamente.',
+            'Nosso aplicativo web está passando por uma grande atualização, e isso pode afetar o funcionamento temporariamente.',
             2500
           );
         }, 5000);
         setTimeout(() => {
           showTypingAndAddMessage(
-            'Mas fique tranquilo(a), tudo será normalizado entre **5 a 10 dias**.',
+            'Nosso Engenheiro de Software (e hacker nas horas vagas 😄), que está à frente da atualização, garantiu pessoalmente que em até 5 a 10 dias tudo estará resolvido — e você receberá um e-mail assim que o processo for concluído.',
             2000
           );
         }, 7500);
@@ -284,9 +294,22 @@ const ChatBot = () => {
         setTimeout(() => {
           showTypingAndAddMessage(
             'Finalizamos por aqui! Obrigado pela paciência e confiança 💙',
-            2000
+            2000,
+            { showInput: true, inputType: 'buttons', buttons: ['Enviar dúvida / reclamação / sugestão'] }
           );
+          setCurrentStep('error-feedback-option');
         }, 11300);
+        break;
+
+      case 'feedback':
+        setUserData(prev => ({ ...prev, feedback: userInput }));
+        setCurrentStep('feedback-sent');
+        setTimeout(() => {
+          showTypingAndAddMessage(
+            'Mensagem enviada. Obrigado por compartilhar com a gente!',
+            1500
+          );
+        }, 1000);
         break;
     }
   };
@@ -323,7 +346,7 @@ const ChatBot = () => {
         setCurrentStep('error-opened');
         setTimeout(() => {
           showTypingAndAddMessage(
-            'O app chegou a abrir normalmente depois da instalação?',
+            'O aplicativo web chegou a abrir normalmente depois da instalação?',
             1800,
             { showInput: true, inputType: 'buttons', buttons: ['Sim', 'Deu erro'] }
           );
@@ -340,6 +363,20 @@ const ChatBot = () => {
             { showInput: true, inputType: 'text' }
           );
         }, 1000);
+        break;
+
+      case 'refund-feedback-option':
+      case 'error-feedback-option':
+        if (buttonText === 'Enviar dúvida / reclamação / sugestão') {
+          setCurrentStep('feedback');
+          setTimeout(() => {
+            showTypingAndAddMessage(
+              'Por favor, digite sua dúvida, reclamação ou sugestão:',
+              1500,
+              { showInput: true, inputType: 'feedback' }
+            );
+          }, 1000);
+        }
         break;
     }
   };
@@ -377,7 +414,7 @@ const ChatBot = () => {
                 <p className="text-sm leading-relaxed">{message.content}</p>
                 
                 {/* Show input when needed */}
-                {message.showInput && (message.inputType === 'text' || message.inputType === 'email' || message.inputType === 'date') && waitingForInput && (
+                {message.showInput && (message.inputType === 'text' || message.inputType === 'email' || message.inputType === 'date' || message.inputType === 'feedback') && waitingForInput && (
                   <div className="mt-3 space-y-2">
                     <Input
                       type={message.inputType === 'email' ? 'email' : message.inputType === 'date' ? 'date' : 'text'}
@@ -387,6 +424,7 @@ const ChatBot = () => {
                       placeholder={
                         message.inputType === 'email' ? 'Digite seu e-mail...' 
                         : message.inputType === 'date' ? 'DD/MM/AAAA'
+                        : message.inputType === 'feedback' ? 'Digite sua mensagem...'
                         : 'Digite sua resposta...'
                       }
                       className="text-sm"
@@ -433,6 +471,9 @@ const ChatBot = () => {
               </div>
             </div>
           )}
+          
+          {/* Auto-scroll target */}
+          <div ref={messagesEndRef} />
         </div>
       </div>
 
